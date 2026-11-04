@@ -1,0 +1,136 @@
+// Silicon Valley: Unicorn Simulator — data model.
+// JSON payloads are stored as strings so the same schema runs on SQLite and PostgreSQL.
+// The provider is chosen from DATABASE_URL by scripts/prepare-db.mjs (SQLite locally, PostgreSQL in production).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Singleton row (id = 1): game status + all configurable content (tracks, tasks,
+// hiring catalog, funding rules, score weights).
+model GameConfig {
+  id        Int       @id @default(1)
+  status    String    @default("lobby") // lobby | running | paused | ended
+  settings  String // JSON GameSettings
+  startedAt DateTime?
+  endedAt   DateTime?
+  updatedAt DateTime  @updatedAt
+}
+
+model Team {
+  id              String            @id @default(cuid())
+  name            String            @unique
+  members         String // JSON string[]: the team lead's email first (empty for organizer-created teams)
+  accessCodeHash  String
+  trackId         String
+  seed            String // RNG seed, logged for fairness audits
+  state           String // JSON TeamState (company, employees, offers, cap table…)
+  version         Int               @default(0) // optimistic lock: prevents double resolution
+  turn            Int               @default(0)
+  cash            Float             @default(0)
+  valuation       Float             @default(0)
+  score           Float             @default(0)
+  scoreAdjustment Float             @default(0)
+  finished        Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  sessions        TeamSession[]
+  memberRows      TeamMember[]
+  events          Event[]
+  transactions    Transaction[]
+  snapshots       MetricsSnapshot[]
+}
+
+model TeamSession {
+  id        String   @id // sha256 of the cookie token
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+}
+
+// Team lead emails: an email can lead only one team.
+model TeamMember {
+  email  String @id
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+model AdminUser {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  lastLoginAt  DateTime?
+  createdAt    DateTime       @default(now())
+  sessions     AdminSession[]
+}
+
+model AdminSession {
+  id        String    @id // sha256 of the cookie token
+  adminId   String
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([adminId])
+}
+
+// Timeline: hires, task attempts (with full outcome calculation), events, funding, score changes.
+model Event {
+  id        Int      @id @default(autoincrement())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  turn      Int
+  type      String // hire | fire | task | event | pitch | funding | payroll | obligation | admin | score
+  title     String
+  detail    String // JSON
+  createdAt DateTime @default(now())
+
+  @@index([teamId, id])
+}
+
+model Transaction {
+  id           Int      @id @default(autoincrement())
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  turn         Int
+  amount       Float
+  category     String // hiring | salary | task | revenue | contract | direct_cost | funding | event | severance | admin
+  memo         String
+  balanceAfter Float
+  createdAt    DateTime @default(now())
+
+  @@index([teamId, id])
+}
+
+model MetricsSnapshot {
+  id        Int      @id @default(autoincrement())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  turn      Int
+  metrics   String // JSON Metrics
+  score     Float
+  breakdown String // JSON ScoreBreakdown
+  createdAt DateTime @default(now())
+
+  @@index([teamId, turn])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  actor     String
+  action    String
+  target    String?
+  reason    String?
+  detail    String   @default("{}")
+  createdAt DateTime @default(now())
+}
