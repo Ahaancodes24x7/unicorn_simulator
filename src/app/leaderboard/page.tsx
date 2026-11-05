@@ -5,6 +5,7 @@ import { money, num } from "@/components/format";
 import { Badge, Spinner } from "@/components/ui";
 import { useLiveBoard } from "@/components/useLiveBoard";
 
+import { Icon } from "@/components/Icon";
 export default function LeaderboardPage() {
   const board = useLiveBoard();
   return (
@@ -28,7 +29,7 @@ export default function LeaderboardPage() {
             {board.teams.slice(0, 3).map((t) => (
               <li key={t.name} className={`glass relative overflow-hidden p-5 ${t.rank === 1 ? "md:-translate-y-2 border-gold/50" : ""}`}>
                 <span className="absolute -right-2 -top-5 font-serif text-[110px] leading-none text-white/[0.05]">{t.rank}</span>
-                <p className="text-sm text-amber">{t.rank === 1 ? "🦄 Leading" : `#${t.rank}`}</p>
+                <p className="text-sm text-amber">{t.rank === 1 ? <><Icon name="crown" className="mr-1" />Leading</> : `#${t.rank}`}</p>
                 <p className="mt-1 truncate font-serif text-2xl text-cream">{t.name}</p>
                 <p className="truncate text-xs text-faint">{t.company} · {t.sector}</p>
                 <p className="num mt-4 font-serif text-4xl text-cream">{t.score.toFixed(1)}</p>
@@ -53,7 +54,7 @@ export default function LeaderboardPage() {
                     <td className="num text-right text-cream">{money(t.valuation)}</td>
                     <td className="num text-right text-muted">{money(t.revenue)}</td>
                     <td className="num text-right text-muted">{num(t.customers)}</td>
-                    <td className="num text-right text-muted">{t.finished ? "✓" : `${t.turn}/${t.turnsTotal}`}</td>
+                    <td className="num text-right text-muted">{t.finished ? <Icon name="check" /> : `${t.turn}/${t.turnsTotal}`}</td>
                     <td className="num px-4 text-right font-serif text-xl text-cream">{t.score.toFixed(1)}</td>
                   </tr>
                 ))}

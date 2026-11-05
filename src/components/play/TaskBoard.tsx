@@ -10,12 +10,13 @@ import { missionXp } from "./gamify";
 import { PageHero } from "./PageHero";
 import { Badge, Button, Modal } from "../ui";
 
+import { Icon } from "@/components/Icon";
 type BoardItem = TeamView["board"][number];
 type Task = BoardItem["task"];
 type Role = TeamView["roles"][number];
 
-/** A role's emoji from the settings (falls back to a generic person). */
-export const roleIcon = (roles: { id: string; icon?: string }[], id: string) => roles.find((r) => r.id === id)?.icon ?? "🧑‍💼";
+/** A role's icon name from the settings (falls back to a generic person). */
+export const roleIcon = (roles: { id: string; icon?: string }[], id: string) => roles.find((r) => r.id === id)?.icon ?? "person";
 
 export function fitFor(task: Pick<Task, "skills" | "difficulty">, skills: Record<Skill, number>) {
   const cap = capabilityFor(task.skills, skills);
@@ -26,14 +27,14 @@ export function fitFor(task: Pick<Task, "skills" | "difficulty">, skills: Record
 const skillsOf = (crew: Employee[], roles: Role[]) => teamSkills({ employees: crew } as TeamState, { roles } as GameSettings);
 
 const CATEGORY_ART: Record<string, { bg: string; main: string; extra: string[] }> = {
-  research: { bg: "from-[#3b2a6b] to-[#1b2a4a]", main: "🔎", extra: ["💬", "📋"] },
-  product: { bg: "from-[#5b2a8a] to-[#24305e]", main: "📱", extra: ["🛠️", "✨"] },
-  growth: { bg: "from-[#8a2c3a] to-[#3b1f5c]", main: "📣", extra: ["📈", "👥"] },
-  ops: { bg: "from-[#2c4a5e] to-[#1f1a3a]", main: "⚙️", extra: ["🏗️", "📦"] },
-  compliance: { bg: "from-[#2c5e4a] to-[#1f2a3a]", main: "🛡️", extra: ["📜", "✅"] },
-  partnership: { bg: "from-[#7a4a1f] to-[#3b1f3a]", main: "🤝", extra: ["📜", "🌐"] },
-  finance: { bg: "from-[#6b5a1f] to-[#2a1f3a]", main: "💵", extra: ["🏷️", "📊"] },
-  recovery: { bg: "from-[#4a3a5e] to-[#1f1a2a]", main: "🩹", extra: ["☕", "🔁"] },
+  research: { bg: "from-[#3b2a6b] to-[#1b2a4a]", main: "search", extra: ["chat", "clipboard"] },
+  product: { bg: "from-[#5b2a8a] to-[#24305e]", main: "phone", extra: ["wrench", "sparkles"] },
+  growth: { bg: "from-[#8a2c3a] to-[#3b1f5c]", main: "megaphone", extra: ["growth", "users"] },
+  ops: { bg: "from-[#2c4a5e] to-[#1f1a3a]", main: "settings", extra: ["crane", "package"] },
+  compliance: { bg: "from-[#2c5e4a] to-[#1f2a3a]", main: "shield", extra: ["scroll", "check-circle"] },
+  partnership: { bg: "from-[#7a4a1f] to-[#3b1f3a]", main: "handshake", extra: ["scroll", "globe"] },
+  finance: { bg: "from-[#6b5a1f] to-[#2a1f3a]", main: "cash", extra: ["tag", "chart"] },
+  recovery: { bg: "from-[#4a3a5e] to-[#1f1a2a]", main: "bandage", extra: ["coffee", "repeat"] },
 };
 
 const REWARD_LABEL: Record<RewardKind, string> = {
@@ -82,7 +83,7 @@ export function TaskBoard({ view, busy, onRun, onHire }: {
           </div>
         }>
         <div className="flex flex-wrap gap-2" role="tablist">
-          {([["ready", `🎯 Ready (${available.length}${hireable.length ? ` + ${hireable.length} to staff` : ""})`], ["locked", `🔒 Locked (${locked.length})`], ["done", `✅ Completed (${done.length})`]] as const).map(([id, label]) => (
+          {([["ready", `Ready (${available.length}${hireable.length ? ` + ${hireable.length} to staff` : ""})`], ["locked", `Locked (${locked.length})`], ["done", `Completed (${done.length})`]] as const).map(([id, label]) => (
             <button key={id} role="tab" aria-selected={filter === id} onClick={() => setFilter(id)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium backdrop-blur-sm transition ${filter === id ? "bg-amber text-ink shadow-[0_6px_20px_-6px_var(--amber)]" : "border border-white/20 bg-black/30 text-cream hover:bg-black/50"}`}>
               {label}
@@ -140,9 +141,9 @@ function RoleNeeds({ task, view, onHire, disabled }: { task: Task; view: TeamVie
         const have = view.state.employees.some((e) => e.roleId === roleId);
         return (
           <li key={roleId} className={`flex items-center gap-1.5 rounded-full border py-0.5 pl-2 text-xs ${have ? "border-good/40 bg-good/10 pr-2 text-good" : "border-bad/40 bg-bad/10 pr-0.5 text-bad"}`}>
-            <span aria-hidden="true">{roleIcon(view.roles, roleId)}</span>
+            <Icon name={roleIcon(view.roles, roleId)} />
             {role?.title.split(" / ")[0] ?? roleId}
-            {have ? " ✓" : role && (
+            {have ? <Icon name="check" inherit /> : role && (
               <button onClick={() => onHire(roleId)} disabled={disabled || view.state.cash < role.hireCost}
                 className="rounded-full bg-cream px-2 py-0.5 font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
                 title={`One-off ${money(role.hireCost)}, then ${money(role.salary)} per turn`}>
@@ -174,9 +175,9 @@ function MissionCard({ item, view, main, locked, done, needsHire, onPick, onHire
         <svg viewBox="0 0 300 40" preserveAspectRatio="none" className="absolute inset-x-0 bottom-0 h-8 w-full opacity-60" aria-hidden="true">
           <path d="M0 40 L0 26 L20 26 L20 14 L40 14 L40 22 L60 22 L60 8 L80 8 L80 20 L110 20 L110 12 L130 12 L130 28 L160 28 L160 10 L185 10 L185 24 L210 24 L210 16 L240 16 L240 26 L270 26 L270 18 L300 18 L300 40 Z" fill="#12091a" />
         </svg>
-        <span className={`absolute right-6 top-4 text-6xl drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] transition group-hover:scale-110 ${main ? "anim-bob" : ""}`} aria-hidden="true">{locked ? "🔒" : done ? "✅" : art.main}</span>
-        <span className="absolute left-24 top-12 text-2xl opacity-80" aria-hidden="true">{art.extra[0]}</span>
-        <span className="absolute right-28 top-3 text-xl opacity-70" aria-hidden="true">{art.extra[1]}</span>
+        <span className={`absolute right-6 top-4 text-6xl drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] transition group-hover:scale-110 ${main ? "anim-bob" : ""}`} aria-hidden="true"><Icon name={locked ? "lock" : done ? "check-circle" : art.main} /></span>
+        <span className="absolute left-24 top-12 text-2xl opacity-80" aria-hidden="true"><Icon name={art.extra[0]} /></span>
+        <span className="absolute right-28 top-3 text-xl opacity-70" aria-hidden="true"><Icon name={art.extra[1]} /></span>
         {main && <span className="absolute left-3 top-3 rounded-md bg-gradient-to-r from-[#ff8a5c] to-[#f2a65a] px-2 py-1 text-[11px] font-extrabold tracking-wider text-ink">MAIN MISSION</span>}
         {needsHire && <span className="absolute left-3 top-3 rounded-md bg-[#7a3cff] px-2 py-1 text-[11px] font-extrabold tracking-wider text-white">NEEDS A HIRE</span>}
         {!main && !needsHire && t.repeatable && !locked && <span className="absolute left-3 top-3 rounded-md bg-black/50 px-2 py-1 text-[11px] font-bold tracking-wider text-cream">REPEATABLE</span>}
@@ -188,8 +189,8 @@ function MissionCard({ item, view, main, locked, done, needsHire, onPick, onHire
         <p className="mt-1 line-clamp-2 text-sm text-muted">{t.objective}</p>
 
         <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-          <span className="rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-cream">👥 {(t.crew?.length || 1)}–{crewLimit(t)}</span>
-          <span className="rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-cream">⏱ {turns} month{turns > 1 ? "s" : ""}</span>
+          <span className="rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-cream"><Icon name="users" className="mr-1" />{(t.crew?.length || 1)}–{crewLimit(t)}</span>
+          <span className="rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-cream"><Icon name="timer" className="mr-1" />{turns} month{turns > 1 ? "s" : ""}</span>
           <span className={`rounded-full border px-2.5 py-1 ${t.risk === "high" ? "border-bad/40 text-bad" : t.risk === "medium" ? "border-warn/40 text-warn" : "border-good/40 text-good"}`}>{t.risk} risk</span>
           {!locked && !done && !needsHire && <Badge tone={fit.tone}>{fit.label}</Badge>}
         </div>
@@ -197,11 +198,11 @@ function MissionCard({ item, view, main, locked, done, needsHire, onPick, onHire
         <ul className="mt-3 space-y-1 text-sm">
           {item.rewards.slice(0, 3).map((k) => (
             <li key={k} className="flex items-center gap-2 font-medium text-good">
-              <span aria-hidden="true">{k === "milestones" ? "★" : k === "risk" || k === "churnPts" ? "▼" : "▲"}</span>
+              <Icon name={k === "milestones" ? "star" : k === "risk" || k === "churnPts" ? "down" : "up"} inherit />
               {k === "customers" ? `More ${view.track.customerLabel}` : k === "risk" || k === "churnPts" ? `Lower ${REWARD_LABEL[k].toLowerCase()}` : REWARD_LABEL[k]}
             </li>
           ))}
-          <li className="flex items-center gap-2 font-medium text-bad"><span aria-hidden="true">▼</span>{t.cost ? `${money(t.cost)} cost` : "Free to run"}</li>
+          <li className="flex items-center gap-2 font-medium text-bad"><Icon name="down" inherit />{t.cost ? `${money(t.cost)} cost` : "Free to run"}</li>
         </ul>
 
         <div className="mt-3"><RoleNeeds task={t} view={view} onHire={onHire} disabled={disabled} /></div>
@@ -249,7 +250,7 @@ function CrewPicker({ item, view, busy, onCancel, onCommit, onHire }: {
           <span className="text-sm text-muted">{crew.length}/{limit} selected · <Badge tone={fit.tone}>{fit.label}</Badge></span>
         </div>
         <p className="mt-1 text-xs text-faint">
-          Only the people you assign count toward the roll. Required: {(task.crew ?? []).map((r) => `${roleIcon(view.roles, r)} ${roleOf(r)?.title ?? r}`).join(", ") || "none"}.
+          Only the people you assign count toward the roll. Required: {(task.crew ?? []).map((r) => `${roleOf(r)?.title ?? r}`).join(", ") || "none"}.
         </p>
         {employees.length === 0 ? (
           <p className="mt-3 rounded-lg border border-line bg-black/15 p-3 text-sm text-muted">No employees yet: the founders handle this one alone.</p>
@@ -264,7 +265,7 @@ function CrewPicker({ item, view, busy, onCancel, onCommit, onHire }: {
                 <li key={e.id}>
                   <button type="button" onClick={() => toggle(e.id)} disabled={full} aria-pressed={on}
                     className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${on ? "border-amber bg-amber/10" : "border-line hover:border-line-strong"} disabled:cursor-not-allowed disabled:opacity-45`}>
-                    <span className="text-xl" aria-hidden="true">{roleIcon(view.roles, e.roleId)}</span>
+                    <span className="text-xl" aria-hidden="true"><Icon name={roleIcon(view.roles, e.roleId)} /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium text-cream">{e.name}</span>
                       <span className="block text-xs text-muted">{role?.title ?? e.roleId}</span>
@@ -272,7 +273,7 @@ function CrewPicker({ item, view, busy, onCancel, onCommit, onHire }: {
                         {relevant.length ? `Helps with ${relevant.join(", ")}` : "No relevant skills"}
                       </span>
                     </span>
-                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${on ? "border-amber bg-amber text-ink" : "border-line-strong"}`}>{on ? "✓" : ""}</span>
+                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${on ? "border-amber bg-amber text-ink" : "border-line-strong"}`}>{on ? <Icon name="check" inherit /> : null}</span>
                   </button>
                 </li>
               );
@@ -303,7 +304,7 @@ function CrewPicker({ item, view, busy, onCancel, onCommit, onHire }: {
       {view.state.offers.length > 0 && <p className="rounded-lg border border-warn/40 bg-warn/10 p-2 text-sm text-warn">Your open investor offers will expire if you take this turn.</p>}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button className="chunky-btn" disabled={busy || missing.length > 0 || !item.available} onClick={() => onCommit(picked)}>🎲 Launch mission</Button>
+        <Button className="chunky-btn" disabled={busy || missing.length > 0 || !item.available} onClick={() => onCommit(picked)}><Icon name="dice" inherit className="mr-1.5" />Launch mission</Button>
       </div>
     </div>
   );

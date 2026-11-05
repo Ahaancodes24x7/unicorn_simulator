@@ -4,7 +4,7 @@ import { computeMetrics, getTrack } from "@/game/metrics";
 import { computeScore, SCORE_LABELS } from "@/game/scoring";
 import type { TeamState } from "@/game/types";
 import { parse, prisma } from "./db";
-import { audit, getGame, invalidateLeaderboard, leaderboard, type TeamSummary } from "./game";
+import { audit, getGame, invalidateLeaderboard, leaderboard, summaryColumn, type TeamSummary } from "./game";
 import { HttpError } from "./http";
 
 export function alertsFor(t: TeamSummary, running: boolean): string[] {
@@ -68,7 +68,8 @@ export type AdminAdjust =
 
 export async function adjustTeam(id: string, adj: AdminAdjust, actor: string) {
   invalidateLeaderboard();
-  const { settings } = await getGame();
+  const game = await getGame();
+  const { settings } = game;
   const team = await prisma.team.findUnique({ where: { id } });
   if (!team) throw new HttpError(404, "Team not found");
   let state = parse<TeamState>(team.state);
@@ -99,7 +100,7 @@ export async function adjustTeam(id: string, adj: AdminAdjust, actor: string) {
     where: { id, version: team.version },
     data: {
       state: JSON.stringify(state), version: { increment: 1 }, trackId: state.trackId, cash: state.cash,
-      valuation: m.valuation, score: score.total, scoreAdjustment,
+      valuation: m.valuation, score: score.total, scoreAdjustment, summary: summaryColumn(state, scoreAdjustment, game),
     },
   });
   if (updated.count !== 1) throw new HttpError(409, "Team changed while adjusting; reload and retry");

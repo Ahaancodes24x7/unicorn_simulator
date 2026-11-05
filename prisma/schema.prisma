@@ -37,6 +37,9 @@ model Team {
   score           Float             @default(0)
   scoreAdjustment Float             @default(0)
   finished        Boolean           @default(false)
+  // Precomputed leaderboard row (JSON, tagged with the settings it was computed under) so ranking
+  // 100+ teams never has to load and replay every team's full state.
+  summary         String            @default("")
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   sessions        TeamSession[]

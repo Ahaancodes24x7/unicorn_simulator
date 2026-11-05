@@ -3,6 +3,7 @@
 // Small game-UI pieces shared by the dashboard: confetti, progress bars and the health ring.
 import { useEffect, useState } from "react";
 
+import { Icon } from "@/components/Icon";
 const CONFETTI_COLORS = ["#f2a65a", "#ec4899", "#8b5cf6", "#7ee08a", "#f6c56b", "#60a5fa"];
 
 /** A one-shot confetti burst. Change `fire` (e.g. a counter) to replay it. */
@@ -55,5 +56,5 @@ export function Ring({ value, color, size = 120, stroke = 12, children }: { valu
 export function Delta({ value, fmt }: { value: number | null; fmt: (v: number) => string }) {
   if (value === null || Math.abs(value) < 0.5) return <span className="text-[11px] text-faint">· no change</span>;
   const up = value > 0;
-  return <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${up ? "bg-good/15 text-good" : "bg-bad/15 text-bad"}`}>{up ? "▲" : "▼"} {fmt(Math.abs(value))}</span>;
+  return <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${up ? "bg-good/15 text-good" : "bg-bad/15 text-bad"}`}><Icon name={up ? "up" : "down"} inherit />{fmt(Math.abs(value))}</span>;
 }

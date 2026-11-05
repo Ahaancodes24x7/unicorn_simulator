@@ -7,6 +7,7 @@ import { money, pct } from "../format";
 import { Badge, Button, Modal, Term } from "../ui";
 import { TERMS } from "./terms";
 
+import { Icon } from "@/components/Icon";
 const INVESTOR_COLORS = ["#e2553b", "#f2a65a", "#7ee08a", "#7aa7ff", "#c58bff", "#f6c56b"];
 
 export function FundingPanel({ view, busy, onPitch, onAccept, onDecline, onSell }: {
@@ -37,11 +38,11 @@ export function FundingPanel({ view, busy, onPitch, onAccept, onDecline, onSell 
       <EquitySale view={view} busy={busy} active={active && !s.finished} onSell={onSell} />
       {/* round ladder */}
       <ol className="flex flex-wrap gap-2">
-        <li><Badge tone="good">✓ Bootstrapping</Badge></li>
+        <li><Badge tone="good"><Icon name="check" inherit className="mr-1" />Bootstrapping</Badge></li>
         {view.rounds.map((r) => (
           <li key={r.id}>
             <Badge tone={raised.has(r.id) ? "good" : next?.round.id === r.id ? (next.eligible ? "accent" : "warn") : "neutral"}>
-              {raised.has(r.id) ? "✓ " : next?.round.id === r.id ? "→ " : ""}{r.name}
+              {raised.has(r.id) ? <Icon name="check" inherit className="mr-1" /> : next?.round.id === r.id ? "→ " : ""}{r.name}
             </Badge>
           </li>
         ))}
@@ -83,7 +84,7 @@ export function FundingPanel({ view, busy, onPitch, onAccept, onDecline, onSell 
               <ul className="space-y-1.5">
                 {next.checks.map((c) => (
                   <li key={c.label} className={`flex items-center gap-2 text-sm ${c.met ? "text-good" : "text-muted"}`}>
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-xs ${c.met ? "border-good bg-good/15" : "border-line-strong"}`}>{c.met ? "✓" : ""}</span>
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-xs ${c.met ? "border-good bg-good/15" : "border-line-strong"}`}>{c.met ? <Icon name="check" /> : null}</span>
                     {c.label}
                   </li>
                 ))}
@@ -172,7 +173,7 @@ function EquitySale({ view, busy, active, onSell }: { view: TeamView; busy: bool
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="game-title">Quick cash</p>
-          <h3 className="mt-1 font-serif text-2xl text-cream">💎 Sell equity to angels</h3>
+          <h3 className="mt-1 font-serif text-2xl text-cream"><Icon name="gem" className="mr-2" />Sell equity to angels</h3>
           <p className="mt-1 max-w-xl text-sm text-muted">
             Sell new shares at a {pct(q.rules.discount)} discount to today&apos;s valuation ({money(q.valuation)}). It doesn&apos;t use a turn, but every
             share you sell lowers your ownership, which counts toward your score. Up to {pct(q.rules.maxPct)} per month.
@@ -206,7 +207,7 @@ function EquitySale({ view, busy, active, onSell }: { view: TeamView; busy: bool
           <p className="text-xs text-faint">This can&apos;t be undone.</p>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button>
-            <Button className="chunky-btn" disabled={busy} onClick={() => { onSell(p); setConfirm(false); }}>💎 Sell shares</Button>
+            <Button className="chunky-btn" disabled={busy} onClick={() => { onSell(p); setConfirm(false); }}><Icon name="gem" inherit className="mr-1.5" />Sell shares</Button>
           </div>
         </div>
       </Modal>

@@ -57,7 +57,7 @@ All formulas are in [docs/FORMULAS.md](docs/FORMULAS.md). Run `npm run sim` to p
 | Game engine | `src/game/`: pure, deterministic and unit-tested; no I/O |
 | Backend | Next.js route handlers (`src/app/api`), persistence and orchestration in `src/lib/game.ts` |
 | Database | Prisma. SQLite locally; PostgreSQL in production (picked automatically from `DATABASE_URL` by `scripts/prepare-db.mjs`) |
-| Realtime | Server-sent events (`/api/stream`) with polling fallback |
+| Realtime | Polling: CDN-cached public leaderboard; dashboards poll with a version tag and get a tiny reply when nothing changed |
 | Auth | Teams: team name + access code (stored as a hash, emailed to the team lead's Gmail). Admins: allowlisted email + bcrypt password |
 
 Data model: `GameConfig` (status + all configurable content), `Team` (state JSON + indexed metrics + optimistic `version`), `TeamSession`, `AdminUser`, `AdminSession`, `Event` (timeline, including roll calculations and score changes), `Transaction`, `MetricsSnapshot`, `AuditLog`.

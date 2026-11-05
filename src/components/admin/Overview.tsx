@@ -7,6 +7,7 @@ import { money, num, pct, ratio, runway } from "../format";
 import { api, Badge, Button, ErrorNote, inputClass, Modal, Panel, Spinner } from "../ui";
 import { AddTeam } from "./TeamAccess";
 
+import { Icon } from "@/components/Icon";
 type Data = Awaited<ReturnType<typeof adminOverview>>;
 
 export function Overview() {
@@ -58,12 +59,12 @@ export function Overview() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {data.status === "lobby" && <Button onClick={() => setPending("start")}>▶ Start game</Button>}
-          {data.status === "running" && <Button variant="subtle" onClick={() => setPending("pause")}>⏸ Pause</Button>}
-          {data.status === "paused" && <Button onClick={() => setPending("resume")}>▶ Resume</Button>}
-          {(data.status === "running" || data.status === "paused") && <Button variant="danger" onClick={() => setPending("end")}>■ End game</Button>}
+          {data.status === "lobby" && <Button onClick={() => setPending("start")}><Icon name="play" inherit className="mr-1.5" />Start game</Button>}
+          {data.status === "running" && <Button variant="subtle" onClick={() => setPending("pause")}><Icon name="pause" inherit className="mr-1.5" />Pause</Button>}
+          {data.status === "paused" && <Button onClick={() => setPending("resume")}><Icon name="play" inherit className="mr-1.5" />Resume</Button>}
+          {(data.status === "running" || data.status === "paused") && <Button variant="danger" onClick={() => setPending("end")}><Icon name="stop" inherit className="mr-1.5" />End game</Button>}
           {data.status === "ended" && <Button variant="subtle" onClick={() => setPending("reopen")}>Reopen</Button>}
-          <a href="/api/admin/export?type=leaderboard" className="inline-flex items-center rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-cream hover:bg-white/5">⬇ CSV</a>
+          <a href="/api/admin/export?type=leaderboard" className="inline-flex items-center rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-cream hover:bg-white/5"><Icon name="download" className="mr-1.5" />CSV</a>
           <AddTeam tracks={data.tracks} onAdded={load} />
           <Button variant="ghost" onClick={() => setPending("reset")}>Reset…</Button>
         </div>

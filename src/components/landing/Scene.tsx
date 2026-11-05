@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { PixelUnicorn } from "./PixelUnicorn";
 
+import { Icon } from "@/components/Icon";
 const W = 1600;
 const H = 900;
 const CYCLE = 48; // seconds for a full sunset → dusk → sunset loop
@@ -113,7 +114,7 @@ function Checklist() {
     <>
       {NOTE_ITEMS.map((item, i) => (
         <text key={item} x="1516" y={560 + i * 30} fill="#3a2c1c" fontSize="26" style={{ fontFamily: "var(--font-caveat)" }}>
-          {item}{i < checked ? " ✓" : ""}
+          {item}{i < checked ? <Icon name="check" className="ml-1" /> : null}
         </text>
       ))}
     </>

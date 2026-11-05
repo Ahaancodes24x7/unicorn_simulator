@@ -24,7 +24,8 @@ async function call(label: string, path: string, cookie?: string, body?: unknown
       headers: { ...(cookie ? { cookie } : {}), ...(body === undefined ? {} : { "content-type": "application/json", origin: BASE }) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    await res.arrayBuffer();
+    const text = await res.text();
+    Object.assign(res, { bodyText: text });
     s.codes[res.status] = (s.codes[res.status] ?? 0) + 1;
     return res;
   } catch {
@@ -63,7 +64,14 @@ async function main() {
     for (let d = 0; d < DEVICES; d++) {
       loops.push((async () => {
         await sleep(Math.random() * 6000);
-        while (Date.now() < until) { await call("dashboard poll", "/api/team/state", t.cookie); await sleep(6000); }
+        // Like the real dashboard: send the version we have; full payload only when it changed.
+        let etag = "";
+        while (Date.now() < until) {
+          const res = await call(etag ? "dashboard poll" : "dashboard load", `/api/team/state${etag ? `?since=${encodeURIComponent(etag)}` : ""}`, t.cookie);
+          const body = res && res.ok ? (() => { try { return JSON.parse((res as Response & { bodyText: string }).bodyText); } catch { return null; } })() : null;
+          if (body?.etag) etag = body.etag;
+          await sleep(6000);
+        }
       })());
     }
     loops.push((async () => {

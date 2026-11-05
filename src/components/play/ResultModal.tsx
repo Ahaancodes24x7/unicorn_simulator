@@ -7,11 +7,12 @@ import { Badge, Button, Modal } from "../ui";
 import { Confetti } from "./fx";
 import { XP } from "./gamify";
 
+import { Icon } from "@/components/Icon";
 const TIER_STYLE = {
-  profitable_success: { tone: "good", emoji: "🚀", color: "text-good", banner: "from-good/30", xp: XP.profitable },
-  strategic_success: { tone: "crt", emoji: "🧭", color: "text-crt", banner: "from-crt/25", xp: XP.strategic },
-  partial: { tone: "warn", emoji: "⚖️", color: "text-warn", banner: "from-warn/25", xp: XP.partial },
-  failure: { tone: "bad", emoji: "💥", color: "text-bad", banner: "from-bad/30", xp: XP.failure },
+  profitable_success: { tone: "good", emoji: "rocket", color: "text-good", banner: "from-good/30", xp: XP.profitable },
+  strategic_success: { tone: "crt", emoji: "compass", color: "text-crt", banner: "from-crt/25", xp: XP.strategic },
+  partial: { tone: "warn", emoji: "balance", color: "text-warn", banner: "from-warn/25", xp: XP.partial },
+  failure: { tone: "bad", emoji: "boom", color: "text-bad", banner: "from-bad/30", xp: XP.failure },
 } as const;
 
 /** Animated roll gauge: fills to the roll, with the partial and success lines marked. */
@@ -52,7 +53,7 @@ export function EffectChips({ a, label = "customers", rounds = [] }: { a: Applie
   return (
     <div className="flex flex-wrap gap-1.5">
       {chips.map((c) => <Badge key={c.t} tone={c.good ? "good" : "bad"}>{c.t}</Badge>)}
-      {a.milestones.map((m) => <Badge key={m} tone="accent">★ {milestoneLabel({ rounds }, m)}</Badge>)}
+      {a.milestones.map((m) => <Badge key={m} tone="accent"><Icon name="star" className="mr-1" />{milestoneLabel({ rounds }, m)}</Badge>)}
     </div>
   );
 }
@@ -68,7 +69,7 @@ export function ResultModal({ outcome, customerLabel, rounds, onClose }: { outco
       <div className="space-y-5">
         <div className={`overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${st.banner} to-transparent p-5 ${outcome.tier === "failure" ? "anim-shake" : ""}`}>
           <div className="flex items-center gap-4">
-            <span className="anim-pop text-6xl" aria-hidden="true">{st.emoji}</span>
+            <span className="anim-pop text-6xl" aria-hidden="true"><Icon name={st.emoji} /></span>
             <div className="min-w-0 flex-1">
               <p className={`anim-pop font-serif text-3xl sm:text-4xl ${st.color}`}>{outcome.taskId === "pitch" && outcome.tier === "strategic_success" ? "Investors are in!" : tierLabel(outcome.tier)}</p>
               <p className="text-muted">{outcome.narrative}</p>
@@ -76,7 +77,7 @@ export function ResultModal({ outcome, customerLabel, rounds, onClose }: { outco
             <span className="anim-pop shrink-0 rounded-full bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] px-3 py-1.5 text-sm font-bold text-white shadow-[0_0_18px_rgba(236,72,153,0.6)]">+{st.xp} XP</span>
           </div>
           <div className="mt-4">
-            <p className="mb-1 flex justify-between text-xs text-muted"><span>🎲 Your roll</span><span className="num font-semibold text-cream">{r.total}</span></p>
+            <p className="mb-1 flex justify-between text-xs text-muted"><span><Icon name="dice" className="mr-1" />Your roll</span><span className="num font-semibold text-cream">{r.total}</span></p>
             <RollMeter total={r.total} success={r.thresholds.success} partial={r.thresholds.partial} />
           </div>
         </div>
@@ -84,7 +85,7 @@ export function ResultModal({ outcome, customerLabel, rounds, onClose }: { outco
 
         {outcome.event && (
           <div className="rounded-xl border border-amber/40 bg-amber/5 p-4">
-            <p className="text-sm font-semibold text-amber">⚡ Critical event: {outcome.event.title}</p>
+            <p className="text-sm font-semibold text-amber"><Icon name="zap" className="mr-1" />Critical event: {outcome.event.title}</p>
             <p className="mt-1 text-sm text-muted">{outcome.event.text}</p>
             <div className="mt-2"><EffectChips a={outcome.event.applied} label={customerLabel} rounds={rounds} /></div>
           </div>
@@ -119,7 +120,7 @@ export function ResultModal({ outcome, customerLabel, rounds, onClose }: { outco
         </div>
 
         {outcome.offers && outcome.offers.length > 0 && <p className="rounded-lg border border-good/40 bg-good/10 p-3 text-sm text-good">You have {outcome.offers.length} term sheet(s) waiting in the Funding tab.</p>}
-        <div className="flex justify-end"><Button onClick={onClose} className="chunky-btn px-6">Continue ▶</Button></div>
+        <div className="flex justify-end"><Button onClick={onClose} className="chunky-btn px-6">Continue <Icon name="play" className="ml-1" /></Button></div>
       </div>
     </Modal>
   );

@@ -9,6 +9,7 @@ import { money, num, pct, ratio, runway } from "../format";
 import { api, Badge, Button, ErrorNote, inputClass, Panel, Spinner } from "../ui";
 import { TeamAccess } from "./TeamAccess";
 
+import { Icon } from "@/components/Icon";
 type Detail = Awaited<ReturnType<typeof adminTeamDetail>>;
 type Tab = "timeline" | "transactions" | "company";
 
@@ -59,7 +60,7 @@ export function TeamDetail({ id }: { id: string }) {
           <p className="mt-1 font-mono text-xs text-faint">RNG seed {d.seed}</p>
         </div>
         <div className="no-print flex gap-2">
-          <a href={`/api/admin/export?type=team&id=${id}`} className="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-cream hover:bg-white/5">⬇ CSV</a>
+          <a href={`/api/admin/export?type=team&id=${id}`} className="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold inline-flex items-center text-cream hover:bg-white/5"><Icon name="download" className="mr-1.5" />CSV</a>
           <Button variant="ghost" onClick={() => window.print()}>Print / PDF</Button>
         </div>
       </div>

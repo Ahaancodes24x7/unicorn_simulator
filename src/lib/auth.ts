@@ -38,11 +38,25 @@ export async function startTeamSession(teamId: string) {
   await setCookie(TEAM_COOKIE, token, TEAM_TTL_MS);
 }
 
+// Every dashboard poll checks the session, so valid sessions are remembered per server instance for a
+// minute. Signing out clears it here at once; other instances drop it within SESSION_CACHE_MS.
+const SESSION_CACHE_MS = 60_000;
+const sessionCache = new Map<string, { teamId: string; expiresAt: number; at: number }>();
+
 export async function currentTeamId(): Promise<string | null> {
   const token = (await cookies()).get(TEAM_COOKIE)?.value;
   if (!token) return null;
-  const session = await prisma.teamSession.findUnique({ where: { id: sha256(token) } });
-  if (!session || session.expiresAt < new Date()) return null;
+  const id = sha256(token);
+  const now = Date.now();
+  const hit = sessionCache.get(id);
+  if (hit && now - hit.at < SESSION_CACHE_MS && hit.expiresAt > now) return hit.teamId;
+  const session = await prisma.teamSession.findUnique({ where: { id } });
+  if (!session || session.expiresAt.getTime() < now) {
+    sessionCache.delete(id);
+    return null;
+  }
+  if (sessionCache.size > 5_000) sessionCache.clear();
+  sessionCache.set(id, { teamId: session.teamId, expiresAt: session.expiresAt.getTime(), at: now });
   return session.teamId;
 }
 
@@ -55,7 +69,10 @@ export async function requireTeamId(): Promise<string> {
 export async function endTeamSession() {
   const jar = await cookies();
   const token = jar.get(TEAM_COOKIE)?.value;
-  if (token) await prisma.teamSession.deleteMany({ where: { id: sha256(token) } });
+  if (token) {
+    sessionCache.delete(sha256(token));
+    await prisma.teamSession.deleteMany({ where: { id: sha256(token) } });
+  }
   jar.delete(TEAM_COOKIE);
 }
 

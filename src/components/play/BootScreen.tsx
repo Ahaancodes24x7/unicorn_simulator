@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PixelUnicorn } from "../landing/PixelUnicorn";
 
+import { Icon } from "@/components/Icon";
 const BOOT_MS = 8000;
 const STAGES = [
   "Incorporating your company",
@@ -177,7 +178,7 @@ export function BootScreen({ onDone }: { onDone: () => void }) {
             disabled={!ready}
             className="rounded-lg bg-cream px-8 py-3 font-serif text-lg text-ink shadow-[0_10px_30px_-10px_rgba(246,231,207,0.7)] transition enabled:hover:-translate-y-0.5 enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {ready ? "Start the simulation ▶" : "Booting…"}
+            {ready ? <>Start the simulation <Icon name="play" className="ml-1" /></> : "Booting…"}
           </button>
         </div>
         {ready && <p className="mt-2 text-center text-xs text-faint">or press Enter{coins > 0 ? ` · ${coins} coin${coins === 1 ? "" : "s"} collected. Nice reflexes!` : ""}</p>}

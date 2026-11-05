@@ -16,7 +16,7 @@ export interface RoleDef {
   skills: Partial<Record<Skill, number>>;
   max: number; // capacity per team
   blurb: string;
-  icon?: string; // emoji shown in the UI
+  icon?: string; // icon name from src/components/Icon.tsx (older emoji values still map to icons)
   acquisition?: boolean; // hiring fee and salary count toward customer acquisition cost (CAC)
 }
 

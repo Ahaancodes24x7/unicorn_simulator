@@ -22,12 +22,15 @@ export interface GameInfo {
   settings: GameSettings;
   startedAt: Date | null;
   endedAt: Date | null;
+  /** Short hash of the settings: tags cached leaderboard rows and dashboard versions. */
+  stamp: string;
+  updatedAt: Date;
 }
 
 // Every request starts by reading the config row, so it's cached for 2s per server instance (a pause or
 // settings change reaches every instance within that time). Dropped immediately on this instance's writes.
 const GAME_TTL_MS = 2_000;
-type ConfigRow = { status: string; settings: string; startedAt: Date | null; endedAt: Date | null };
+type ConfigRow = { status: string; settings: string; startedAt: Date | null; endedAt: Date | null; updatedAt: Date; stamp: string };
 let gameCache: { at: number; row: Promise<ConfigRow> } | null = null;
 
 export function invalidateGame() {
@@ -35,11 +38,10 @@ export function invalidateGame() {
 }
 
 async function loadConfig(): Promise<ConfigRow> {
-  const row = await prisma.gameConfig.findUnique({ where: { id: 1 } });
-  if (row) return row;
-  return prisma.gameConfig.upsert({
+  const row = (await prisma.gameConfig.findUnique({ where: { id: 1 } })) ?? (await prisma.gameConfig.upsert({
     where: { id: 1 }, update: {}, create: { id: 1, status: "lobby", settings: JSON.stringify(defaultSettings()) },
-  });
+  }));
+  return { ...row, stamp: sha256(row.settings).slice(0, 12) };
 }
 
 export async function getGame(): Promise<GameInfo> {
@@ -50,7 +52,10 @@ export async function getGame(): Promise<GameInfo> {
   }
   const row = await gameCache.row;
   // parsed per call so no request can mutate another request's settings object
-  return { status: row.status as GameStatus, settings: parse<GameSettings>(row.settings), startedAt: row.startedAt, endedAt: row.endedAt };
+  return {
+    status: row.status as GameStatus, settings: parse<GameSettings>(row.settings), startedAt: row.startedAt, endedAt: row.endedAt,
+    stamp: row.stamp, updatedAt: row.updatedAt,
+  };
 }
 
 export async function audit(actor: string, action: string, opts: { target?: string; reason?: string; detail?: unknown } = {}) {
@@ -172,7 +177,7 @@ export async function createTeam(input: { name: string; lead?: string; trackId?:
     data: {
       name: input.name, members: JSON.stringify(members), accessCodeHash: hashCode(code),
       trackId, seed: randomBytes(12).toString("hex"), state: JSON.stringify(state),
-      cash: state.cash, valuation: m.valuation, score: score.total,
+      cash: state.cash, valuation: m.valuation, score: score.total, summary: summaryColumn(state, 0, game),
       ...(input.lead ? { memberRows: { create: { email: input.lead } } } : {}),
       events: { create: { turn: 0, type: "admin", title: `${input.name} founded ${getTrack(settings, trackId).company}`, detail: JSON.stringify({ trackId, lead: input.lead ?? null, byAdmin: !!input.byAdmin, startingCash: state.cash }) } },
       transactions: { create: { turn: 0, amount: state.cash, category: "funding", memo: "Bootstrapping: starting capital", balanceAfter: state.cash } },
@@ -183,20 +188,26 @@ export async function createTeam(input: { name: string; lead?: string; trackId?:
 }
 
 /** Team names are matched case-insensitively; the code ignores case and dashes. */
-export async function findTeamByCode(name: string, code: string) {
-  const wanted = name.trim().toLowerCase();
-  const team = (await prisma.team.findMany()).find((t) => t.name.toLowerCase() === wanted);
+// Names are matched case-insensitively in code (SQLite and Postgres differ), so only the small
+// login columns are read for every team, never the game state.
+const LOGIN_COLUMNS = { id: true, name: true, members: true, accessCodeHash: true } as const;
+type LoginRow = { id: string; name: string; members: string; accessCodeHash: string };
+
+export async function findTeamByCode(name: string, code: string): Promise<LoginRow | null> {
+  const team = await findTeamByName(name);
   if (!team || team.accessCodeHash !== hashCode(code)) return null;
   return team;
 }
 
-export async function findTeamByName(name: string) {
+export async function findTeamByName(name: string): Promise<LoginRow | null> {
   const wanted = name.trim().toLowerCase();
-  return (await prisma.team.findMany()).find((t) => t.name.toLowerCase() === wanted) ?? null;
+  const exact = await prisma.team.findUnique({ where: { name: name.trim() }, select: LOGIN_COLUMNS });
+  if (exact) return exact;
+  return (await prisma.team.findMany({ select: LOGIN_COLUMNS })).find((t) => t.name.toLowerCase() === wanted) ?? null;
 }
 
 /** The team lead's email (the first member), if the team has one. */
-export const teamLead = (team: Team) => parse<string[]>(team.members)[0] ?? null;
+export const teamLead = (team: { members: string }) => parse<string[]>(team.members)[0] ?? null;
 
 /** Issues a new access code; the old one stops working, but people already inside stay signed in. */
 export async function reissueAccessCode(teamId: string) {
@@ -236,12 +247,14 @@ export async function performAction(teamId: string, action: TeamAction): Promise
     case "decline": result = declineOffers(state); break;
     case "sell": result = sellEquity(state, settings, action.pct); break;
   }
-  await persist(team, state, result, settings, action.type === "task" || action.type === "pitch" ? `Turn ${result.state.turn}: ${result.outcome?.title}` : undefined);
+  await persist(team, state, result, game, action.type === "task" || action.type === "pitch" ? `Turn ${result.state.turn}: ${result.outcome?.title}` : undefined);
   return { outcome: result.outcome };
 }
 
-async function persist(team: Team, before: TeamState, result: ActionResult, settings: GameSettings, scoreReason?: string) {
-  invalidateLeaderboard();
+async function persist(team: Team, before: TeamState, result: ActionResult, game: GameInfo, scoreReason?: string) {
+  // No leaderboard invalidation here: with 100 teams acting, that would rebuild the ranking on nearly
+  // every poll. Ranks may lag a move by up to BOARD_TTL_MS, which nobody notices.
+  const { settings } = game;
   const { state } = result;
   const m = computeMetrics(state, settings);
   const score = computeScore(state, settings, m, team.scoreAdjustment);
@@ -260,6 +273,7 @@ async function persist(team: Team, before: TeamState, result: ActionResult, sett
       data: {
         state: JSON.stringify(state), version: { increment: 1 }, turn: state.turn, cash: state.cash,
         valuation: m.valuation, score: score.total, finished: state.finished,
+        summary: summaryColumn(state, team.scoreAdjustment, game),
       },
     });
     if (updated.count !== 1) throw new HttpError(409, "A teammate just made a move. Refresh and try again.");
@@ -298,24 +312,36 @@ export interface TeamSummary {
   updatedAt: Date;
 }
 
-export function summarize(team: Team, settings: GameSettings): Omit<TeamSummary, "rank"> {
-  const state = parse<TeamState>(team.state);
+type SummaryFields = Omit<TeamSummary, "id" | "name" | "members" | "rank" | "updatedAt">;
+
+function summaryFields(state: TeamState, scoreAdjustment: number, settings: GameSettings): SummaryFields {
   const m = computeMetrics(state, settings);
-  const breakdown = computeScore(state, settings, m, team.scoreAdjustment);
+  const breakdown = computeScore(state, settings, m, scoreAdjustment);
   const track = settings.tracks.find((t) => t.id === state.trackId);
   return {
-    id: team.id, name: team.name, members: parse<string[]>(team.members), trackId: state.trackId, awaitingTrack: !!state.awaitingTrack,
+    trackId: state.trackId, awaitingTrack: !!state.awaitingTrack,
     company: track?.company ?? "?", sector: track?.sector ?? "?", turn: state.turn, turnsTotal: state.turnsTotal,
     finished: state.finished, metrics: m, breakdown, score: breakdown.total,
     roundsRaised: state.rounds.map((r) => settings.rounds.find((x) => x.id === r.roundId)?.name ?? r.roundId),
     completedTasks: Object.values(state.completed).reduce((a, b) => a + b, 0), employees: state.employees.length,
-    updatedAt: team.updatedAt,
   };
 }
 
-// Ranking every team means loading every team's full state, and every dashboard poll needs a rank.
-// With 100+ teams polling, that's the hot path, so the ranked list is cached briefly per server
-// instance and dropped whenever this instance writes a team. Game status is always read fresh.
+/** The `summary` column: leaderboard fields tagged with the settings stamp they were computed under. */
+export function summaryColumn(state: TeamState, scoreAdjustment: number, game: Pick<GameInfo, "settings" | "stamp">): string {
+  return JSON.stringify({ h: game.stamp, ...summaryFields(state, scoreAdjustment, game.settings) });
+}
+
+export function summarize(team: Team, settings: GameSettings): Omit<TeamSummary, "rank"> {
+  return {
+    id: team.id, name: team.name, members: parse<string[]>(team.members), updatedAt: team.updatedAt,
+    ...summaryFields(parse<TeamState>(team.state), team.scoreAdjustment, settings),
+  };
+}
+
+// Every dashboard poll needs a rank, so ranking is the hot path. It reads only the small precomputed
+// `summary` column (rows written under older settings are recomputed once and saved back), and the
+// ranked list is cached briefly per server instance (dropped on admin changes and new/removed teams).
 const BOARD_TTL_MS = 2_000;
 let boardCache: { at: number; teams: Promise<TeamSummary[]> } | null = null;
 
@@ -323,9 +349,28 @@ export function invalidateLeaderboard() {
   boardCache = null;
 }
 
-async function rankTeams(settings: GameSettings): Promise<TeamSummary[]> {
-  const teams = await prisma.team.findMany();
-  const rows = teams.map((t) => summarize(t, settings));
+async function rankTeams(game: GameInfo): Promise<TeamSummary[]> {
+  const teams = await prisma.team.findMany({ select: { id: true, name: true, members: true, summary: true, updatedAt: true } });
+  const fields = new Map<string, SummaryFields>();
+  const stale: string[] = [];
+  for (const t of teams) {
+    const s = t.summary ? parse<SummaryFields & { h?: string }>(t.summary) : null;
+    if (s && s.h === game.stamp) fields.set(t.id, s);
+    else stale.push(t.id);
+  }
+  if (stale.length) {
+    const full = await prisma.team.findMany({ where: { id: { in: stale } }, select: { id: true, state: true, scoreAdjustment: true, version: true } });
+    await Promise.all(full.map(async (t) => {
+      const summary = summaryColumn(parse<TeamState>(t.state), t.scoreAdjustment, game);
+      fields.set(t.id, parse<SummaryFields>(summary));
+      // Save it back without bumping the version; skipped if the team changed meanwhile.
+      await prisma.team.updateMany({ where: { id: t.id, version: t.version }, data: { summary } }).catch(() => {});
+    }));
+  }
+  const rows = teams.filter((t) => fields.has(t.id)).map((t) => {
+    const { h: _h, ...f } = fields.get(t.id) as SummaryFields & { h?: string };
+    return { id: t.id, name: t.name, members: parse<string[]>(t.members), updatedAt: t.updatedAt, ...f };
+  });
   rows.sort((a, b) => compareRank(
     { score: a.score, breakdown: a.breakdown, runway: a.metrics.runway },
     { score: b.score, breakdown: b.breakdown, runway: b.metrics.runway },
@@ -336,7 +381,7 @@ async function rankTeams(settings: GameSettings): Promise<TeamSummary[]> {
 export async function leaderboard(): Promise<{ game: GameInfo; teams: TeamSummary[] }> {
   const game = await getGame();
   if (!boardCache || Date.now() - boardCache.at > BOARD_TTL_MS) {
-    const teams = rankTeams(game.settings);
+    const teams = rankTeams(game);
     boardCache = { at: Date.now(), teams };
     teams.catch(() => { boardCache = null; });
   }
@@ -372,6 +417,7 @@ export async function teamView(teamId: string) {
   ]);
   const rank = teams.find((t) => t.id === teamId)?.rank ?? null;
   return {
+    etag: viewTag(team.version, game),
     game: { status: game.status, eventName: settings.eventName, turns: settings.turns, weights: settings.weights, teamCount: teams.length, trackCount: settings.tracks.length },
     team: { id: team.id, name: team.name, members: parse<string[]>(team.members), rank },
     track: { id: track.id, code: track.code, sector: track.sector, problem: track.problem, company: track.company, tagline: track.tagline, customerLabel: track.customerLabel },
@@ -388,3 +434,25 @@ export async function teamView(teamId: string) {
 }
 
 export type TeamView = Awaited<ReturnType<typeof teamView>>;
+
+/** Identifies one version of a team's dashboard: its own state, the settings, and the game status. */
+const viewTag = (version: number, game: GameInfo) => `${version}.${game.stamp}.${game.status}`;
+
+/**
+ * Dashboard poll. When the client already has the current version (`since`), only the rank and team
+ * count are returned: one tiny indexed read instead of the full state, event feed and payload.
+ */
+export async function teamViewSince(teamId: string, since: string | null) {
+  if (since) {
+    const [game, row, { teams }] = await Promise.all([
+      getGame(),
+      prisma.team.findUnique({ where: { id: teamId }, select: { version: true } }),
+      leaderboard(),
+    ]);
+    if (!row) throw new HttpError(404, "Team not found");
+    if (viewTag(row.version, game) === since) {
+      return { same: true as const, rank: teams.find((t) => t.id === teamId)?.rank ?? null, teamCount: teams.length };
+    }
+  }
+  return teamView(teamId);
+}

@@ -5,13 +5,13 @@ import type { Metrics, TeamState } from "@/game/types";
 // ---------------------------------------------------------------- founder rank (by valuation)
 
 export const RANKS = [
-  { min: 0, title: "Garage Hacker", icon: "🔧" },
-  { min: 100_000, title: "Bootstrapper", icon: "🥾" },
-  { min: 1_000_000, title: "Seed Hustler", icon: "🌱" },
-  { min: 10_000_000, title: "Rising Star", icon: "⭐" },
-  { min: 100_000_000, title: "Scale-up Titan", icon: "🚀" },
-  { min: 500_000_000, title: "Soonicorn", icon: "🦄" },
-  { min: 1_000_000_000, title: "Unicorn", icon: "👑" },
+  { min: 0, title: "Garage Hacker", icon: "wrench" },
+  { min: 100_000, title: "Bootstrapper", icon: "boot" },
+  { min: 1_000_000, title: "Seed Hustler", icon: "sprout" },
+  { min: 10_000_000, title: "Rising Star", icon: "star" },
+  { min: 100_000_000, title: "Scale-up Titan", icon: "rocket" },
+  { min: 500_000_000, title: "Soonicorn", icon: "gem" },
+  { min: 1_000_000_000, title: "Unicorn", icon: "crown" },
 ] as const;
 
 export function founderRank(valuation: number) {
@@ -65,21 +65,21 @@ export interface Achievement { id: string; icon: string; title: string; desc: st
 
 // Based on counts and metrics (not specific mission or milestone ids), so they work for any problem set.
 const ACHIEVEMENTS: (Achievement & { test: (s: TeamState, m: Metrics) => boolean })[] = [
-  { id: "first-hire", icon: "🤝", title: "First Hire", desc: "Hire your first employee", test: (s) => s.employees.length >= 1 },
-  { id: "first-win", icon: "🎯", title: "First Win", desc: "Succeed at a mission", test: (s) => s.stats.profitable + s.stats.strategic >= 1 },
-  { id: "prototype", icon: "🛠️", title: "It's Alive!", desc: "Reach product level 1", test: (s) => s.product >= 1 },
-  { id: "first-customer", icon: "🎉", title: "First Customer", desc: "Land a paying customer", test: (s) => s.acquiredTotal >= 1 },
-  { id: "profitable", icon: "💹", title: "In the Black", desc: "Earn more than you burn in a turn", test: (s) => s.lastNet > 0 && s.turn > 0 },
-  { id: "first-round", icon: "💼", title: "Funded", desc: "Close your first funding round", test: (s) => s.rounds.length >= 1 },
-  { id: "dream-team", icon: "👥", title: "Dream Team", desc: "Grow to 5 employees", test: (s) => s.employees.length >= 5 },
-  { id: "comeback", icon: "🔥", title: "Comeback Kid", desc: "Succeed after a failure", test: (s) => s.stats.failure > 0 && s.stats.profitable + s.stats.strategic > 0 },
-  { id: "milestones-5", icon: "🗺️", title: "Trailblazer", desc: "Reach 5 milestones", test: (s) => s.milestones.filter((x) => !x.startsWith("path-")).length >= 5 },
-  { id: "product-3", icon: "🧩", title: "Product Wizard", desc: "Reach product level 3", test: (s) => s.product >= 3 },
+  { id: "first-hire", icon: "handshake", title: "First Hire", desc: "Hire your first employee", test: (s) => s.employees.length >= 1 },
+  { id: "first-win", icon: "target", title: "First Win", desc: "Succeed at a mission", test: (s) => s.stats.profitable + s.stats.strategic >= 1 },
+  { id: "prototype", icon: "wrench", title: "It's Alive!", desc: "Reach product level 1", test: (s) => s.product >= 1 },
+  { id: "first-customer", icon: "party", title: "First Customer", desc: "Land a paying customer", test: (s) => s.acquiredTotal >= 1 },
+  { id: "profitable", icon: "chart-line", title: "In the Black", desc: "Earn more than you burn in a turn", test: (s) => s.lastNet > 0 && s.turn > 0 },
+  { id: "first-round", icon: "briefcase", title: "Funded", desc: "Close your first funding round", test: (s) => s.rounds.length >= 1 },
+  { id: "dream-team", icon: "users", title: "Dream Team", desc: "Grow to 5 employees", test: (s) => s.employees.length >= 5 },
+  { id: "comeback", icon: "flame", title: "Comeback Kid", desc: "Succeed after a failure", test: (s) => s.stats.failure > 0 && s.stats.profitable + s.stats.strategic > 0 },
+  { id: "milestones-5", icon: "map", title: "Trailblazer", desc: "Reach 5 milestones", test: (s) => s.milestones.filter((x) => !x.startsWith("path-")).length >= 5 },
+  { id: "product-3", icon: "puzzle", title: "Product Wizard", desc: "Reach product level 3", test: (s) => s.product >= 3 },
   { id: "rounds-2", icon: "🅰️", title: "Repeat Raiser", desc: "Close two funding rounds", test: (s) => s.rounds.length >= 2 },
-  { id: "millionaire", icon: "💰", title: "Seven Figures", desc: "Reach a $1M valuation", test: (_s, m) => m.valuation >= 1_000_000 },
-  { id: "rep", icon: "🌟", title: "Crowd Favourite", desc: "Reputation 80+", test: (_s, m) => m.reputation >= 80 },
-  { id: "hundred-m", icon: "🚀", title: "Nine Figures", desc: "Reach a $100M valuation", test: (_s, m) => m.valuation >= 100_000_000 },
-  { id: "unicorn", icon: "🦄", title: "Unicorn!", desc: "Reach a $1B valuation", test: (_s, m) => m.valuation >= 1_000_000_000 },
+  { id: "millionaire", icon: "wallet", title: "Seven Figures", desc: "Reach a $1M valuation", test: (_s, m) => m.valuation >= 1_000_000 },
+  { id: "rep", icon: "star", title: "Crowd Favourite", desc: "Reputation 80+", test: (_s, m) => m.reputation >= 80 },
+  { id: "hundred-m", icon: "rocket", title: "Nine Figures", desc: "Reach a $100M valuation", test: (_s, m) => m.valuation >= 100_000_000 },
+  { id: "unicorn", icon: "gem", title: "Unicorn!", desc: "Reach a $1B valuation", test: (_s, m) => m.valuation >= 1_000_000_000 },
 ];
 
 export function achievements(s: TeamState, m: Metrics) {

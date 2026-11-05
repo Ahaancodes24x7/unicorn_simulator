@@ -9,15 +9,16 @@ import { api, Button, ErrorNote, Modal } from "../ui";
 import { PageHero } from "./PageHero";
 import { roleIcon } from "./TaskBoard";
 
+import { Icon } from "@/components/Icon";
 // Role filters are derived from each role's strongest skill, so custom roles slot in automatically.
 const SKILL_GROUP: Record<Skill, { label: string; icon: string }> = {
-  strategy: { label: "Leadership", icon: "👔" }, tech: { label: "Engineering", icon: "💻" }, sales: { label: "Growth", icon: "📣" },
-  marketing: { label: "Growth", icon: "📣" }, product: { label: "Product", icon: "🎨" }, ops: { label: "Operations", icon: "⚙️" },
-  finance: { label: "Finance", icon: "💵" },
+  strategy: { label: "Leadership", icon: "briefcase" }, tech: { label: "Engineering", icon: "laptop" }, sales: { label: "Growth", icon: "megaphone" },
+  marketing: { label: "Growth", icon: "megaphone" }, product: { label: "Product", icon: "palette" }, ops: { label: "Operations", icon: "settings" },
+  finance: { label: "Finance", icon: "cash" },
 };
 const groupOf = (r: RoleDef) => {
   const top = (Object.entries(r.skills) as [Skill, number][]).sort((x, y) => y[1] - x[1])[0]?.[0];
-  return top ? SKILL_GROUP[top] : { label: "Other", icon: "✨" };
+  return top ? SKILL_GROUP[top] : { label: "Other", icon: "sparkles" };
 };
 
 export function TeamPanel({ view, skills, busy, onHire, onFire }: {
@@ -33,17 +34,17 @@ export function TeamPanel({ view, skills, busy, onHire, onFire }: {
   const firing = employees.find((e) => e.id === fireId);
   const firingRole = view.roles.find((r) => r.id === firing?.roleId);
   const capacity = view.roles.reduce((n, r) => n + r.max, 0);
-  const groups = [{ label: "All roles", icon: "✨" }, ...view.roles.map(groupOf).filter((g, i, all) => all.findIndex((x) => x.label === g.label) === i)];
+  const groups = [{ label: "All roles", icon: "sparkles" }, ...view.roles.map(groupOf).filter((g, i, all) => all.findIndex((x) => x.label === g.label) === i)];
   const roles = view.roles.filter((r) => group === "All roles" || groupOf(r).label === group);
   // Missions that are waiting only on this role: hiring it is what unlocks them.
   const unlocks = (roleId: string) => view.board.filter((b) => !b.available && (b.task.crew ?? []).includes(roleId)
     && !employees.some((e) => e.roleId === roleId) && b.reasons.every((r) => r.startsWith("Hire "))).length;
 
   const stats = [
-    { icon: "👥", label: "Team size", value: `${employees.length} / ${capacity}` },
-    { icon: "💸", label: "Payroll / turn", value: money(payroll) },
-    { icon: "🔥", label: "Burn / turn", value: money(m.burn) },
-    { icon: "⏳", label: "Runway", value: runway(m.runway), bad: m.runway < 2 },
+    { icon: "users", label: "Team size", value: `${employees.length} / ${capacity}` },
+    { icon: "dollar", label: "Payroll / turn", value: money(payroll) },
+    { icon: "flame", label: "Burn / turn", value: money(m.burn) },
+    { icon: "hourglass", label: "Runway", value: runway(m.runway), bad: m.runway < 2 },
   ];
 
   return (
@@ -52,7 +53,7 @@ export function TeamPanel({ view, skills, busy, onHire, onFire }: {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {stats.map((s) => (
             <div key={s.label} className="flex items-center gap-3 rounded-2xl border border-white/15 bg-black/40 px-4 py-3 backdrop-blur-sm">
-              <span className="text-2xl" aria-hidden="true">{s.icon}</span>
+              <span className="text-2xl" aria-hidden="true"><Icon name={s.icon} /></span>
               <span>
                 <span className="block text-[11px] uppercase tracking-wider text-faint">{s.label}</span>
                 <span className={`num block font-serif text-xl ${s.bad ? "text-bad" : "text-cream"}`}>{s.value}</span>
@@ -68,7 +69,7 @@ export function TeamPanel({ view, skills, busy, onHire, onFire }: {
             {groups.map((g) => (
               <button key={g.label} role="tab" aria-selected={group === g.label} onClick={() => setGroup(g.label)}
                 className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${group === g.label ? "bg-amber text-ink shadow-[0_6px_20px_-6px_var(--amber)]" : "border border-white/15 bg-black/25 text-cream hover:border-amber/50"}`}>
-                <span aria-hidden="true">{g.icon}</span>{g.label}
+                <span aria-hidden="true"><Icon name={g.icon} /></span>{g.label}
               </button>
             ))}
           </div>
@@ -81,7 +82,7 @@ export function TeamPanel({ view, skills, busy, onHire, onFire }: {
               const opens = unlocks(r.id);
               return (
                 <li key={r.id} className={`game-card flex flex-col gap-4 p-4 transition hover:border-amber/50 sm:flex-row sm:items-center ${opens ? "game-card-hot" : ""}`}>
-                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber/30 bg-gradient-to-b from-amber/20 to-black/30 text-3xl" aria-hidden="true">{roleIcon(view.roles, r.id)}</span>
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber/30 bg-gradient-to-b from-amber/20 to-black/30 text-3xl" aria-hidden="true"><Icon name={roleIcon(view.roles, r.id)} /></span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-semibold text-cream">{r.title}</h3>
@@ -125,7 +126,7 @@ export function TeamPanel({ view, skills, busy, onHire, onFire }: {
                   const role = view.roles.find((r) => r.id === e.roleId);
                   return (
                     <li key={e.id} className="group flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 p-2.5">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/30 text-xl" aria-hidden="true">{roleIcon(view.roles, e.roleId)}</span>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/30 text-xl" aria-hidden="true"><Icon name={roleIcon(view.roles, e.roleId)} /></span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-cream">{e.name}</span>
                         <span className="block truncate text-xs text-faint">{role?.title} · {money(role?.salary ?? 0)}/turn</span>
@@ -161,7 +162,7 @@ export function TeamPanel({ view, skills, busy, onHire, onFire }: {
         {hireRole && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <span className="anim-pop flex h-16 w-16 items-center justify-center rounded-2xl border border-amber/40 bg-amber/15 text-4xl" aria-hidden="true">{roleIcon(view.roles, hireRole.id)}</span>
+              <span className="anim-pop flex h-16 w-16 items-center justify-center rounded-2xl border border-amber/40 bg-amber/15 text-4xl" aria-hidden="true"><Icon name={roleIcon(view.roles, hireRole.id)} /></span>
               <p className="text-sm text-muted">{hireRole.blurb}</p>
             </div>
             <dl className="grid grid-cols-2 gap-2 text-sm">
@@ -171,7 +172,7 @@ export function TeamPanel({ view, skills, busy, onHire, onFire }: {
             </dl>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setHireRole(null)}>Cancel</Button>
-              <Button className="chunky-btn" disabled={busy} onClick={() => { onHire(hireRole.id); setHireRole(null); }}>🤝 Confirm hire</Button>
+              <Button className="chunky-btn" disabled={busy} onClick={() => { onHire(hireRole.id); setHireRole(null); }}><Icon name="handshake" inherit className="mr-1.5" />Confirm hire</Button>
             </div>
           </div>
         )}

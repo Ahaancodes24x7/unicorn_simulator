@@ -9,6 +9,7 @@ import { Term } from "../ui";
 import { PageHero } from "./PageHero";
 import { TERMS } from "./terms";
 
+import { Icon } from "@/components/Icon";
 // ---------------------------------------------------------------- small chart kit
 
 type Series = { label: string; color: string; values: number[] };
@@ -153,7 +154,7 @@ function Card({ title, icon, tip, right, children, className = "" }: { title: st
   return (
     <section className={`game-card p-5 ${className}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 font-semibold text-cream"><span aria-hidden="true">{icon}</span>{tip ? <Term label={title} tip={tip} /> : title}</h3>
+        <h3 className="flex items-center gap-2 font-semibold text-cream"><Icon name={icon} />{tip ? <Term label={title} tip={tip} /> : title}</h3>
         {right}
       </div>
       {children}
@@ -185,12 +186,12 @@ export function Analytics({ view }: { view: TeamView }) {
   const recent = h.slice(-6);
 
   const tiles = [
-    { icon: "📈", label: "Revenue / turn", value: money(m.revenue), now: m.revenue, before: prev?.revenue, tip: TERMS.revenue },
-    { icon: "🔥", label: "Burn / turn", value: money(m.burn), now: m.burn, before: prev?.burn, invert: true, tip: "Total cash going out each turn: payroll plus direct costs." },
-    { icon: "👥", label: "CAC", value: m.cac ? money(m.cac, { cents: m.cac < 100 }) : "–", now: m.cac, before: prev?.cac, invert: true, tip: TERMS.cac },
-    { icon: "❤️", label: "LTV", value: m.ltv ? money(m.ltv, { cents: m.ltv < 100 }) : "–", now: m.ltv, before: prev?.ltv, tip: TERMS.ltv },
-    { icon: "🦄", label: "Valuation", value: money(m.valuation), now: m.valuation, before: prev?.valuation, tip: TERMS.valuation },
-    { icon: "💰", label: "Cash on hand", value: money(m.cash), now: m.cash, before: prev?.cash, tip: TERMS.cash, sub: `Runway: ${runway(m.runway)}` },
+    { icon: "growth", label: "Revenue / turn", value: money(m.revenue), now: m.revenue, before: prev?.revenue, tip: TERMS.revenue },
+    { icon: "flame", label: "Burn / turn", value: money(m.burn), now: m.burn, before: prev?.burn, invert: true, tip: "Total cash going out each turn: payroll plus direct costs." },
+    { icon: "users", label: "CAC", value: m.cac ? money(m.cac, { cents: m.cac < 100 }) : "–", now: m.cac, before: prev?.cac, invert: true, tip: TERMS.cac },
+    { icon: "heart", label: "LTV", value: m.ltv ? money(m.ltv, { cents: m.ltv < 100 }) : "–", now: m.ltv, before: prev?.ltv, tip: TERMS.ltv },
+    { icon: "gem", label: "Valuation", value: money(m.valuation), now: m.valuation, before: prev?.valuation, tip: TERMS.valuation },
+    { icon: "wallet", label: "Cash on hand", value: money(m.cash), now: m.cash, before: prev?.cash, tip: TERMS.cash, sub: `Runway: ${runway(m.runway)}` },
   ];
   const won = view.state.acquiredTotal;
   const funnel = [
@@ -207,7 +208,7 @@ export function Analytics({ view }: { view: TeamView }) {
         {tiles.map((t) => (
           <div key={t.label} className="game-card p-4">
             <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/30 text-lg ring-1 ring-white/10" aria-hidden="true">{t.icon}</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/30 text-lg ring-1 ring-white/10" aria-hidden="true"><Icon name={t.icon} /></span>
               <span className="text-xs text-muted"><Term label={t.label} tip={t.tip} /></span>
             </div>
             <p className="num mt-2 truncate font-serif text-2xl text-cream">{t.value}</p>
@@ -217,18 +218,18 @@ export function Analytics({ view }: { view: TeamView }) {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
-        <Card title="Revenue & burn per turn" icon="📊" right={<Legend items={[{ label: "Revenue", color: "#4ade80", values: [] }, { label: "Burn", color: "#f87171", values: [] }]} />}>
+        <Card title="Revenue & burn per turn" icon="chart" right={<Legend items={[{ label: "Revenue", color: "#4ade80", values: [] }, { label: "Burn", color: "#f87171", values: [] }]} />}>
           <AreaChart labels={labels} fmt={(v) => money(v)} series={[
             { label: "Revenue", color: "#4ade80", values: h.map((p) => p.revenue) },
             { label: "Burn", color: "#f87171", values: h.map((p) => p.burn) },
           ]} />
         </Card>
-        <Card title="Cash runway" icon="⏳" tip={TERMS.runway} className="game-card-hot">
+        <Card title="Cash runway" icon="hourglass" tip={TERMS.runway} className="game-card-hot">
           <div className="grid items-center gap-4 sm:grid-cols-[auto_1fr] xl:grid-cols-1 2xl:grid-cols-[auto_1fr]">
             <div className="flex justify-center"><Gauge value={m.netBurn <= 0 ? 1 : m.runway / 12} big={m.netBurn <= 0 ? "∞" : m.runway.toFixed(1)} small={m.netBurn <= 0 ? "Profitable" : "turns left"} /></div>
             <dl className="space-y-2.5 text-sm">
-              {[["💰", "Cash on hand", money(m.cash)], ["🔥", "Net burn / turn", m.netBurn > 0 ? money(m.netBurn) : "None"], ["⏳", "Runway", runway(m.runway)]].map(([i, k, v]) => (
-                <div key={k} className="flex items-center justify-between border-b border-white/5 pb-2"><dt className="text-muted"><span aria-hidden="true">{i}</span> {k}</dt><dd className="num font-semibold text-cream">{v}</dd></div>
+              {[["wallet", "Cash on hand", money(m.cash)], ["flame", "Net burn / turn", m.netBurn > 0 ? money(m.netBurn) : "None"], ["hourglass", "Runway", runway(m.runway)]].map(([i, k, v]) => (
+                <div key={k} className="flex items-center justify-between border-b border-white/5 pb-2"><dt className="text-muted"><Icon name={i} /> {k}</dt><dd className="num font-semibold text-cream">{v}</dd></div>
               ))}
             </dl>
           </div>
@@ -236,17 +237,17 @@ export function Analytics({ view }: { view: TeamView }) {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <Card title="Valuation history" icon="🦄" tip={TERMS.valuation}>
+        <Card title="Valuation history" icon="gem" tip={TERMS.valuation}>
           <AreaChart labels={labels} fmt={(v) => money(v)} callout series={[{ label: "Valuation", color: "#d946ef", values: h.map((p) => p.valuation) }]} />
         </Card>
-        <Card title="CAC vs LTV" icon="⚖️" tip={TERMS.ltvCac} right={<Legend items={[{ label: "CAC", color: "#a855f7", values: [] }, { label: "LTV", color: "#f59e0b", values: [] }]} />}>
+        <Card title="CAC vs LTV" icon="balance" tip={TERMS.ltvCac} right={<Legend items={[{ label: "CAC", color: "#a855f7", values: [] }, { label: "LTV", color: "#f59e0b", values: [] }]} />}>
           <GroupedBars labels={recent.map((p) => p.turn)} fmt={(v) => money(v, { cents: v > 0 && v < 10 })}
             a={{ label: "CAC", color: "#a855f7", values: recent.map((p) => p.cac) }} b={{ label: "LTV", color: "#f59e0b", values: recent.map((p) => p.ltv) }} />
         </Card>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <Card title="Customer funnel (all-time)" icon="🔻">
+        <Card title="Customer funnel (all-time)" icon="funnel">
           <ul className="space-y-2">
             {funnel.map((f, i) => (
               <li key={f.label} className="grid grid-cols-[1fr_auto_auto] items-center gap-4">
@@ -259,18 +260,18 @@ export function Analytics({ view }: { view: TeamView }) {
             ))}
           </ul>
         </Card>
-        <Card title="Unit economics" icon="🧮">
+        <Card title="Unit economics" icon="calculator">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {[
-              ["📊", "Gross margin", pct(m.grossMargin), TERMS.margin],
-              ["💵", "Contribution / customer", money(contribution, { cents: contribution < 100 }), "Revenue per customer after direct costs, each turn."],
-              ["👤", "ARPU", money(m.arpu, { cents: m.arpu < 100 }), "Average revenue per customer, per turn."],
-              ["⏱", "Payback period", payback ? `${payback.toFixed(1)} turns` : "–", "Turns of contribution needed to earn back what a customer cost to acquire (CAC)."],
-              ["⚖️", "LTV : CAC", ratio(m.ltvCac), TERMS.ltvCac],
-              ["🔁", "Churn / turn", pct(m.churnRate, 1), TERMS.churn],
+              ["chart", "Gross margin", pct(m.grossMargin), TERMS.margin],
+              ["cash", "Contribution / customer", money(contribution, { cents: contribution < 100 }), "Revenue per customer after direct costs, each turn."],
+              ["user", "ARPU", money(m.arpu, { cents: m.arpu < 100 }), "Average revenue per customer, per turn."],
+              ["timer", "Payback period", payback ? `${payback.toFixed(1)} turns` : "–", "Turns of contribution needed to earn back what a customer cost to acquire (CAC)."],
+              ["balance", "LTV : CAC", ratio(m.ltvCac), TERMS.ltvCac],
+              ["repeat", "Churn / turn", pct(m.churnRate, 1), TERMS.churn],
             ].map(([i, k, v, tip]) => (
               <div key={k} className="rounded-xl border border-white/10 bg-black/25 p-3">
-                <p className="text-xs text-muted"><span aria-hidden="true">{i}</span> <Term label={k} tip={tip} /></p>
+                <p className="text-xs text-muted"><Icon name={i} /> <Term label={k} tip={tip} /></p>
                 <p className="num mt-1 font-serif text-xl text-cream">{v}</p>
               </div>
             ))}
@@ -284,13 +285,13 @@ export function Analytics({ view }: { view: TeamView }) {
 // ---------------------------------------------------------------- Score
 
 const SCORE_META: Record<keyof ScoreWeights, { icon: string; short: string; desc: string; tip: string }> = {
-  valuation: { icon: "🦄", short: "Company value", desc: "Valuation on a log scale: $10k = 0, $1B = 100.", tip: "grow valuation: revenue growth and milestones raise your multiple" },
-  profitability: { icon: "💹", short: "Profitability", desc: "LTV:CAC (5× = full marks) and operating margin.", tip: "improve unit economics: raise prices, cut churn, acquire more efficiently" },
-  traction: { icon: "👥", short: "Traction", desc: "Customers vs your track's target, plus recurring revenue.", tip: "win more customers with growth and partnership missions" },
-  execution: { icon: "✅", short: "Execution", desc: "Mission hit-rate (partials count half) and milestones.", tip: "complete more missions; assign the best-fit crew" },
-  efficiency: { icon: "⏳", short: "Runway", desc: "Runway (12+ turns or profitable = full) and value per dollar raised.", tip: "protect runway: avoid idle hires and wasteful spend" },
-  fundraising: { icon: "🤝", short: "Fundraising", desc: "Rounds raised and ownership retained; missed targets cost points.", tip: "raise rounds on good terms and keep more of your company" },
-  resilience: { icon: "🛡️", short: "Resilience", desc: "70% reputation, 30% low operating risk.", tip: "build reputation and lower risk with compliance and process work" },
+  valuation: { icon: "gem", short: "Company value", desc: "Valuation on a log scale: $10k = 0, $1B = 100.", tip: "grow valuation: revenue growth and milestones raise your multiple" },
+  profitability: { icon: "chart-line", short: "Profitability", desc: "LTV:CAC (5× = full marks) and operating margin.", tip: "improve unit economics: raise prices, cut churn, acquire more efficiently" },
+  traction: { icon: "users", short: "Traction", desc: "Customers vs your track's target, plus recurring revenue.", tip: "win more customers with growth and partnership missions" },
+  execution: { icon: "check-circle", short: "Execution", desc: "Mission hit-rate (partials count half) and milestones.", tip: "complete more missions; assign the best-fit crew" },
+  efficiency: { icon: "hourglass", short: "Runway", desc: "Runway (12+ turns or profitable = full) and value per dollar raised.", tip: "protect runway: avoid idle hires and wasteful spend" },
+  fundraising: { icon: "handshake", short: "Fundraising", desc: "Rounds raised and ownership retained; missed targets cost points.", tip: "raise rounds on good terms and keep more of your company" },
+  resilience: { icon: "shield", short: "Resilience", desc: "70% reputation, 30% low operating risk.", tip: "build reputation and lower risk with compliance and process work" },
 };
 
 export function ScorePanel({ view }: { view: TeamView }) {
@@ -308,22 +309,22 @@ export function ScorePanel({ view }: { view: TeamView }) {
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_2fr]">
         <section className="game-card game-card-hot flex items-center justify-center gap-4 p-6">
-          <span className="text-4xl opacity-80" aria-hidden="true">🌿</span>
+          <span className="text-4xl opacity-80"><Icon name="leaf" /></span>
           <div className="text-center">
             <p className="text-sm text-muted">Composite score</p>
             <p className="font-serif text-6xl text-cream"><span className="num">{b.total.toFixed(1)}</span><span className="text-2xl text-muted"> / 100</span></p>
           </div>
-          <span className="-scale-x-100 text-4xl opacity-80" aria-hidden="true">🌿</span>
+          <span className="-scale-x-100 text-4xl opacity-80"><Icon name="leaf" /></span>
         </section>
         <section className="game-card grid grid-cols-2 divide-white/10 sm:grid-cols-4 sm:divide-x">
           {[
-            ["🏅", "Rank", view.team.rank ? `#${view.team.rank}` : "–", view.game.teamCount ? `of ${view.game.teamCount}` : ""],
+            ["medal", "Rank", view.team.rank ? `#${view.team.rank}` : "–", view.game.teamCount ? `of ${view.game.teamCount}` : ""],
             [SCORE_META.valuation.icon, "Company value", `${Math.round(b.components.valuation)}%`, ""],
             [SCORE_META.execution.icon, "Execution", `${Math.round(b.components.execution)}%`, ""],
             [SCORE_META.efficiency.icon, "Runway", `${Math.round(b.components.efficiency)}%`, ""],
           ].map(([i, k, v, sub]) => (
             <div key={k} className="flex items-center gap-3 p-5">
-              <span className="text-3xl" aria-hidden="true">{i}</span>
+              <span className="text-3xl"><Icon name={i} /></span>
               <span><span className="block text-xs text-muted">{k}</span><span className="num font-serif text-3xl text-amber">{v}</span> <span className="text-sm text-muted">{sub}</span></span>
             </div>
           ))}
@@ -342,7 +343,7 @@ export function ScorePanel({ view }: { view: TeamView }) {
               return (
                 <li key={k} className="grid grid-cols-[1fr_70px_minmax(90px,1fr)_70px] items-center gap-3 border-b border-white/5 px-5 py-3 last:border-0 sm:grid-cols-[1fr_70px_minmax(120px,1fr)_70px_80px]">
                   <span className="flex items-center gap-3">
-                    <span className="text-2xl" aria-hidden="true">{SCORE_META[k].icon}</span>
+                    <span className="text-2xl" aria-hidden="true"><Icon name={SCORE_META[k].icon} /></span>
                     <span><span className="block text-sm font-semibold text-cream">{SCORE_LABELS[k]}</span><span className="hidden text-xs text-faint md:block">{SCORE_META[k].desc}</span></span>
                   </span>
                   <span className="w-fit rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-amber">{Math.round(share * 100)}%</span>
@@ -360,11 +361,11 @@ export function ScorePanel({ view }: { view: TeamView }) {
 
         <div className="space-y-5">
           <section className="game-card p-5">
-            <h3 className="mb-1 flex items-center gap-2 font-serif text-xl text-cream"><span aria-hidden="true">🕸️</span>Performance radar</h3>
+            <h3 className="mb-1 flex items-center gap-2 font-serif text-xl text-cream"><Icon name="radar" />Performance radar</h3>
             <Radar axes={keys.map((k) => ({ label: SCORE_META[k].short, value: b.components[k] }))} />
           </section>
           <section className="game-card p-5">
-            <h3 className="mb-3 flex items-center gap-2 font-serif text-xl text-cream"><span aria-hidden="true">💡</span>Key insights</h3>
+            <h3 className="mb-3 flex items-center gap-2 font-serif text-xl text-cream"><Icon name="idea" />Key insights</h3>
             <ul className="space-y-2 text-sm">
               <li className="flex gap-2 rounded-xl border border-good/30 bg-good/10 p-3 text-good"><span aria-hidden="true">↑</span>Strongest: {SCORE_META[best].short} ({Math.round(b.components[best])}%). Keep it up.</li>
               {weakest.map((k) => (

@@ -19,13 +19,14 @@ import { ResultModal } from "./ResultModal";
 import { TaskBoard } from "./TaskBoard";
 import { TeamPanel } from "./TeamPanel";
 
+import { Icon } from "@/components/Icon";
 const TABS = [
-  { id: "HQ", icon: "🏠", label: "HQ" },
-  { id: "Missions", icon: "🎯", label: "Missions" },
-  { id: "Crew", icon: "👥", label: "Crew" },
-  { id: "Funding", icon: "💰", label: "Funding" },
-  { id: "Analytics", icon: "📊", label: "Analytics" },
-  { id: "Score", icon: "🏆", label: "Score" },
+  { id: "HQ", icon: "home", label: "HQ" },
+  { id: "Missions", icon: "target", label: "Missions" },
+  { id: "Crew", icon: "users", label: "Crew" },
+  { id: "Funding", icon: "wallet", label: "Funding" },
+  { id: "Analytics", icon: "chart", label: "Analytics" },
+  { id: "Score", icon: "trophy", label: "Score" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
@@ -51,9 +52,20 @@ export function Dashboard() {
   const [confetti, setConfetti] = useState(0);
   const seen = useRef<{ badges: Set<string>; level: number } | null>(null);
 
-  const load = useCallback(async () => {
+  // The poll sends the version it already has; the server answers { same: true } (just rank and team
+  // count) unless something changed, so idle dashboards cost almost nothing.
+  const etag = useRef<string | null>(null);
+  const load = useCallback(async (full = false) => {
     try {
-      setView(await api<TeamView>("/api/team/state"));
+      const since = !full && etag.current ? `?since=${encodeURIComponent(etag.current)}` : "";
+      const res = await api<TeamView | { same: true; rank: number | null; teamCount: number }>(`/api/team/state${since}`);
+      if ("same" in res) {
+        setView((v) => v && (v.team.rank === res.rank && v.game.teamCount === res.teamCount ? v
+          : { ...v, team: { ...v.team, rank: res.rank }, game: { ...v.game, teamCount: res.teamCount } }));
+      } else {
+        etag.current = res.etag;
+        setView(res);
+      }
       setError(null);
     } catch (e) {
       if ((e as { status?: number }).status === 401) router.replace("/join");
@@ -64,7 +76,9 @@ export function Dashboard() {
   useEffect(() => {
     load();
     const t = setInterval(() => { if (!document.hidden) load(); }, 6000);
-    return () => clearInterval(t);
+    const onShow = () => { if (!document.hidden) load(); };
+    document.addEventListener("visibilitychange", onShow);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onShow); };
   }, [load]);
 
   useEffect(() => {
@@ -83,7 +97,7 @@ export function Dashboard() {
     if (!prev) return; // first load: don't celebrate what was already earned
     const fresh: Celebration[] = unlocked.filter((a: Achievement) => !prev.badges.has(a.id))
       .map((a) => ({ id: Date.now() + Math.random(), icon: a.icon, title: "Achievement unlocked", text: a.title }));
-    if (level > prev.level) fresh.unshift({ id: Date.now(), icon: "⬆️", title: "Level up!", text: `You reached level ${level}` });
+    if (level > prev.level) fresh.unshift({ id: Date.now(), icon: "level-up", title: "Level up!", text: `You reached level ${level}` });
     if (fresh.length) {
       setCelebrations((c) => [...c, ...fresh]);
       setConfetti((n) => n + 1);
@@ -103,10 +117,10 @@ export function Dashboard() {
       const res = await api<{ outcome?: TaskOutcome }>("/api/team/action", body);
       if (res.outcome) setOutcome(res.outcome);
       else if (message) setToast(message);
-      await load();
+      await load(true);
     } catch (e) {
       setActionError((e as Error).message);
-      await load();
+      await load(true);
     } finally {
       setBusy(false);
     }
@@ -146,16 +160,16 @@ export function Dashboard() {
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${tab === t.id ? "bg-gradient-to-r from-amber/90 to-rust/80 text-ink shadow-[0_8px_24px_-10px_rgba(242,166,90,0.8)]" : "text-muted hover:bg-white/5 hover:text-cream"}`}>
-              <span aria-hidden="true">{t.icon}</span>{t.label}
+              <Icon name={t.icon} inherit={tab === t.id} />{t.label}
               {dot(t.id) && <span className={`ml-auto h-2 w-2 rounded-full ${tab === t.id ? "bg-ink" : "bg-amber anim-glow"}`} />}
             </button>
           ))}
           <Link href="/leaderboard" target="_blank" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted hover:bg-white/5 hover:text-cream">
-            <span aria-hidden="true">🥇</span>Leaderboard ↗
+            <Icon name="medal" />Leaderboard ↗
           </Link>
         </nav>
         <div className="mt-auto rounded-2xl border border-amber/30 bg-gradient-to-b from-amber/15 to-transparent p-4 text-center">
-          <p className="text-3xl" aria-hidden="true">{rank.icon}</p>
+          <p className="text-3xl" aria-hidden="true"><Icon name={rank.icon} /></p>
           <p className="mt-1 font-semibold text-amber">{rank.title}</p>
           <p className="text-xs text-faint">{rank.next ? `Next: ${rank.next.title}` : "Top rank reached!"}</p>
           <Meter value={rank.progress} className="mt-2" height="h-1.5" />
@@ -197,7 +211,7 @@ export function Dashboard() {
             {TABS.map((t) => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ${tab === t.id ? "bg-amber text-ink" : "bg-white/5 text-muted"}`}>
-                <span aria-hidden="true">{t.icon}</span>{t.label}{dot(t.id) && " •"}
+                <Icon name={t.icon} inherit={tab === t.id} />{t.label}{dot(t.id) && " •"}
               </button>
             ))}
           </nav>
@@ -205,17 +219,17 @@ export function Dashboard() {
 
         <main className="mx-auto max-w-7xl px-4 pb-16 pt-5 sm:px-6">
           <div className="mb-4 space-y-2">
-            {view.game.status === "lobby" && <Banner tone="warn">⏳ The organizers haven&apos;t started the game yet. Explore your HQ; missions unlock when the game begins.</Banner>}
-            {view.game.status === "paused" && <Banner tone="warn">⏸ The game is paused by the organizers. Your company is safe; play resumes shortly.</Banner>}
-            {view.game.status === "ended" && <Banner tone="neutral">🏁 Game over! Final score <b>{view.breakdown.total.toFixed(1)}</b>{view.team.rank ? <>, rank <b>#{view.team.rank}</b></> : null}.</Banner>}
-            {s.finished && view.game.status !== "ended" && <Banner tone="good">🏁 All {s.turnsTotal} months played. Final score <b>{view.breakdown.total.toFixed(1)}</b>, rank #{view.team.rank}. Results lock when the organizers end the game.</Banner>}
-            {m.runway < 2 && !s.finished && <Banner tone="bad">🚨 Low fuel: under 2 months of runway. Cut costs, take a consulting sprint, or raise money.</Banner>}
+            {view.game.status === "lobby" && <Banner tone="warn"><Icon name="hourglass" className="mr-1.5" />The organizers haven&apos;t started the game yet. Explore your HQ; missions unlock when the game begins.</Banner>}
+            {view.game.status === "paused" && <Banner tone="warn"><Icon name="pause" className="mr-1.5" />The game is paused by the organizers. Your company is safe; play resumes shortly.</Banner>}
+            {view.game.status === "ended" && <Banner tone="neutral"><Icon name="flag" className="mr-1.5" />Game over! Final score <b>{view.breakdown.total.toFixed(1)}</b>{view.team.rank ? <>, rank <b>#{view.team.rank}</b></> : null}.</Banner>}
+            {s.finished && view.game.status !== "ended" && <Banner tone="good"><Icon name="flag" className="mr-1.5" />All {s.turnsTotal} months played. Final score <b>{view.breakdown.total.toFixed(1)}</b>, rank #{view.team.rank}. Results lock when the organizers end the game.</Banner>}
+            {m.runway < 2 && !s.finished && <Banner tone="bad"><Icon name="siren" className="mr-1.5" />Low fuel: under 2 months of runway. Cut costs, take a consulting sprint, or raise money.</Banner>}
             {actionError && <ErrorNote>{actionError}</ErrorNote>}
           </div>
 
           {s.awaitingTrack && (
             <section className="game-card mx-auto max-w-2xl p-8 text-center">
-              <p className="anim-bob text-6xl" aria-hidden="true">🗂️</p>
+              <p className="anim-bob text-6xl"><Icon name="folder" /></p>
               <h2 className="mt-4 font-serif text-3xl text-cream">Your problem set is on its way</h2>
               <p className="mt-2 text-muted">The organizers assign each team one of {view.game.trackCount} problem sets. This page updates by itself as soon as yours is assigned.</p>
             </section>
@@ -236,7 +250,7 @@ export function Dashboard() {
                 onPitch={() => act({ type: "pitch" })}
                 onAccept={(offerId) => act({ type: "accept", offerId }, "Term sheet signed. Cash is in the bank!")}
                 onDecline={() => act({ type: "decline" }, "Offers declined.")}
-                onSell={(pct) => act({ type: "sell", pct }, "💎 Shares sold. Cash is in the bank!")} />}
+                onSell={(pct) => act({ type: "sell", pct }, "Shares sold. Cash is in the bank!")} />}
             </section>
           )}
         </main>
@@ -246,7 +260,7 @@ export function Dashboard() {
       <Confetti fire={confetti} />
       {celebrations[0] && (
         <div key={celebrations[0].id} role="status" className="anim-pop fixed left-1/2 top-24 z-[55] flex -translate-x-1/2 items-center gap-4 rounded-2xl border border-amber/60 bg-gradient-to-b from-[#3b1f4d] to-[#1d1029] px-6 py-4 shadow-[0_20px_60px_-15px_rgba(242,166,90,0.6)]">
-          <span className="text-4xl" aria-hidden="true">{celebrations[0].icon}</span>
+          <span className="text-4xl" aria-hidden="true"><Icon name={celebrations[0].icon} /></span>
           <span>
             <span className="block text-[11px] font-bold uppercase tracking-[0.2em] text-amber">{celebrations[0].title}</span>
             <span className="block font-serif text-xl text-cream">{celebrations[0].text}</span>
@@ -254,7 +268,7 @@ export function Dashboard() {
         </div>
       )}
       {toast && <div role="status" className="anim-pop fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-good/40 bg-[#1d1029] px-5 py-2.5 text-sm text-good shadow-xl">{toast}</div>}
-      {busy && <div className="fixed right-5 top-20 z-50 rounded-full border border-amber/40 bg-[#1d1029] px-4 py-2 text-xs text-amber">🎲 Rolling…</div>}
+      {busy && <div className="fixed right-5 top-20 z-50 rounded-full border border-amber/40 bg-[#1d1029] px-4 py-2 text-xs text-amber"><Icon name="dice" className="mr-1.5 animate-spin" />Rolling…</div>}
     </div>
   );
 }
