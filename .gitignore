@@ -7,3 +7,6 @@ out
 .env.local
 next-env.d.ts
 *.tsbuildinfo
+*.db-wal
+*.db-shm
+vercel.env

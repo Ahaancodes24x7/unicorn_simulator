@@ -24,13 +24,32 @@ export interface GameInfo {
   endedAt: Date | null;
 }
 
+// Every request starts by reading the config row, so it's cached for 2s per server instance (a pause or
+// settings change reaches every instance within that time). Dropped immediately on this instance's writes.
+const GAME_TTL_MS = 2_000;
+type ConfigRow = { status: string; settings: string; startedAt: Date | null; endedAt: Date | null };
+let gameCache: { at: number; row: Promise<ConfigRow> } | null = null;
+
+export function invalidateGame() {
+  gameCache = null;
+}
+
+async function loadConfig(): Promise<ConfigRow> {
+  const row = await prisma.gameConfig.findUnique({ where: { id: 1 } });
+  if (row) return row;
+  return prisma.gameConfig.upsert({
+    where: { id: 1 }, update: {}, create: { id: 1, status: "lobby", settings: JSON.stringify(defaultSettings()) },
+  });
+}
+
 export async function getGame(): Promise<GameInfo> {
-  let row = await prisma.gameConfig.findUnique({ where: { id: 1 } });
-  if (!row) {
-    row = await prisma.gameConfig.upsert({
-      where: { id: 1 }, update: {}, create: { id: 1, status: "lobby", settings: JSON.stringify(defaultSettings()) },
-    });
+  if (!gameCache || Date.now() - gameCache.at > GAME_TTL_MS) {
+    const row = loadConfig();
+    gameCache = { at: Date.now(), row };
+    row.catch(() => { gameCache = null; });
   }
+  const row = await gameCache.row;
+  // parsed per call so no request can mutate another request's settings object
   return { status: row.status as GameStatus, settings: parse<GameSettings>(row.settings), startedAt: row.startedAt, endedAt: row.endedAt };
 }
 
@@ -42,9 +61,11 @@ export async function audit(actor: string, action: string, opts: { target?: stri
 
 export async function saveSettings(raw: unknown, actor: string, reason?: string) {
   invalidateLeaderboard();
+  invalidateGame();
   const settings = settingsSchema.parse(raw) as GameSettings;
   const before = await getGame();
   await prisma.gameConfig.update({ where: { id: 1 }, data: { settings: JSON.stringify(settings) } });
+  invalidateGame();
   // Keep in-flight teams consistent with a changed turn limit.
   if (settings.turns !== before.settings.turns) {
     const teams = await prisma.team.findMany();
@@ -64,6 +85,7 @@ function changedKeys(a: GameSettings, b: GameSettings): string[] {
 }
 
 export async function setStatus(status: GameStatus, actor: string, reason?: string) {
+  invalidateGame();
   const game = await getGame();
   const allowed: Record<GameStatus, GameStatus[]> = {
     lobby: ["running"], running: ["paused", "ended"], paused: ["running", "ended"], ended: ["running"],
@@ -77,11 +99,13 @@ export async function setStatus(status: GameStatus, actor: string, reason?: stri
       ...(status === "ended" ? { endedAt: new Date() } : {}),
     },
   });
+  invalidateGame();
   await audit(actor, `game.${status === "running" ? (game.status === "lobby" ? "start" : "resume") : status === "paused" ? "pause" : "end"}`, { reason });
 }
 
 export async function resetGame(actor: string, reason: string, keepSettings: boolean) {
   invalidateLeaderboard();
+  invalidateGame();
   const count = await prisma.team.count();
   await prisma.$transaction([
     prisma.team.deleteMany(),
@@ -90,6 +114,8 @@ export async function resetGame(actor: string, reason: string, keepSettings: boo
       data: { status: "lobby", startedAt: null, endedAt: null, ...(keepSettings ? {} : { settings: JSON.stringify(defaultSettings()) }) },
     }),
   ]);
+  invalidateGame();
+  invalidateLeaderboard();
   await audit(actor, "game.reset", { reason, detail: { teamsDeleted: count, keepSettings } });
 }
 
