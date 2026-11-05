@@ -75,7 +75,8 @@ export function Dashboard() {
 
   useEffect(() => {
     load();
-    const t = setInterval(() => { if (!document.hidden) load(); }, 6000);
+    // 10s keeps 100 teams x 4 devices well inside Vercel Hobby's 1M calls/month; moves refresh instantly anyway.
+    const t = setInterval(() => { if (!document.hidden) load(); }, 10_000);
     const onShow = () => { if (!document.hidden) load(); };
     document.addEventListener("visibilitychange", onShow);
     return () => { clearInterval(t); document.removeEventListener("visibilitychange", onShow); };

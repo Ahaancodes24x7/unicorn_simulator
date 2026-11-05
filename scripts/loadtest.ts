@@ -70,7 +70,7 @@ async function main() {
           const res = await call(etag ? "dashboard poll" : "dashboard load", `/api/team/state${etag ? `?since=${encodeURIComponent(etag)}` : ""}`, t.cookie);
           const body = res && res.ok ? (() => { try { return JSON.parse((res as Response & { bodyText: string }).bodyText); } catch { return null; } })() : null;
           if (body?.etag) etag = body.etag;
-          await sleep(6000);
+          await sleep(10_000);
         }
       })());
     }
